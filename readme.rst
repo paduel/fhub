@@ -11,9 +11,11 @@ This package is still in a very early stage of development, so it is still incom
 Installation
 ~~~~~~~~~~~~
 
-.. code:: bash
+Pending.
 
-    pip install fhub
+.. .. code:: bash
+
+..   pip install fhub
 
 
 Quick start
