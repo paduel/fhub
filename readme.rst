@@ -33,4 +33,14 @@ You need a Finnhub API Key, you can get free one, at https://finnhub.io.
    
     # Download prices for several tickers from a date.
     data = hub.condle(['AMZN', 'NFLX', 'DIS'], start="2018-01-01")
+
+
+Documentation
+~~~~~~~~~~~~~
+
+Official documentation of the API REST of Finnhub:
+
+https://finnhub.io/docs/api
+
+Only some of the functions available in the REST API have been implemented yet.
     
