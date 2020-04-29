@@ -50,6 +50,11 @@ You need a Finnhub API Key, you can get free one, at https://finnhub.io.
     # Download prices for several tickers from a date.
     data = hub.candle(['AMZN', 'NFLX', 'DIS'], start="2018-01-01")
 
+See more examples of use at quick_start_ notebook
+
+.. _quick_start: https://github.com/paduel/fhub/blob/master/examples/quick_start.ipynb
+
+
 
 Documentation
 ~~~~~~~~~~~~~
