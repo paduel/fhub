@@ -19,6 +19,7 @@
 from pandas import DataFrame, Series
 from pandas import to_datetime, concat
 from functools import wraps
+from datetime import datetime
 
 
 class Error(Exception):
@@ -132,3 +133,12 @@ def _recursive(func):
             else:
                 return _dfs
     return helper
+
+
+def _normalize_date(date):
+    assert isinstance(date, str)
+    return date.replace('/', '-').replace('.', '-').replace(' ', '-')
+
+def _unixtime(date):
+    assert isinstance(date, str)
+    return datetime.strptime(_normalize_date(date), "%Y-%m-%d").strftime("%s")

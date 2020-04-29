@@ -25,6 +25,7 @@ import requests
 from .utils import FinnhubError
 from .utils import _json_to_df_candle, _rename_quote, _check_resolution
 from .utils import _to_dataframe, _check_kind, _recursive
+from .utils import _unixtime
 
 
 class Session:
@@ -79,7 +80,7 @@ class Session:
             raise FinnhubError(r.content.decode("utf-8"))
 
     @_check_kind
-    @_to_dataframe
+    @_to_dataframe()
     def exchanges(self,
                   kind='stock'):
         """
@@ -91,7 +92,7 @@ class Session:
         return self._request(_endpoint)
 
     @_check_kind
-    @_to_dataframe
+    @_to_dataframe()
     def symbols(self,
                 exchange,
                 kind='stock'):
@@ -101,7 +102,7 @@ class Session:
         }
         return self._request(_endpoint, params)
 
-    @_to_dataframe
+    @_to_dataframe()
     def news(self,
              category='general',
              minid=0):
@@ -112,7 +113,7 @@ class Session:
         }
         return self._request(_endpoint, params)
 
-    @_to_dataframe
+    @_to_dataframe()
     def company_news(
             self,
             symbol
@@ -120,7 +121,7 @@ class Session:
         _endpoint = f"news/{symbol}"
         return self._request(_endpoint)
 
-    @_to_dataframe
+    @_to_dataframe()
     def profile(
             self,
             symbol=None,
@@ -337,7 +338,7 @@ class Session:
             params
         )
 
-    @_to_dataframe
+    @_to_dataframe()
     def economic_code(self):
         _endpoint = "economic/code"
         return self._request(_endpoint)
@@ -360,7 +361,7 @@ class Session:
         _codes = self.economic_code()
         _unit = 'value'
         if get_unit:
-            _unit = _codes.set_index('code').loc['MA-ESP-6667797870', 'unit']
+            _unit = _codes.set_index('code').loc[economic_code, 'unit']
         _df.columns = ['date', _unit]
         _df = _df.set_index('date')
         _df.index = pd.to_datetime(_df.index)
@@ -384,7 +385,7 @@ class Session:
 
     @_recursive
     @_check_kind
-    def candles(
+    def candle(
             self,
             symbol,
             kind='stock',
@@ -404,8 +405,8 @@ class Session:
         params = {
             'symbol': symbol,
             'resolution': resolution,
-            'from': pd.to_datetime(start).strftime("%s"),
-            'to': pd.to_datetime(end).strftime("%s"),
+            'from': _unixtime(start),
+            'to': _unixtime(end)
         }
 
         if kind == 'stock':
