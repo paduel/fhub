@@ -33,7 +33,7 @@ class Session:
     Finnhub API client.  You need a valid API key from Finnhub.
     """
     BASE_URL = 'https://finnhub.io/api/v1/'
-    AVAILABLE_METRICS = [
+    available_metrics = [
         'price',
         'valuation',
         'growth',
@@ -42,6 +42,7 @@ class Session:
         'financialStrength',
         'perShare'
     ]
+
 
 
     def __init__(
@@ -83,7 +84,6 @@ class Session:
             return r.json()
         else:
             raise FinnhubError(r.content.decode("utf-8"))
-
 
 # --------------------- Stock Fundamentals --------------------- #
 
@@ -262,7 +262,7 @@ class Session:
             symbol
     ):
         _metrics = {}
-        for _metric in self.AVAILABLE_METRICS:
+        for _metric in self.available_metrics:
             _metrics[_metric] = self.metrics(symbol, _metric)
             _sleep(0.1)
         return pd.concat(_metrics)

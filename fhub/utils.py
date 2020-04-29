@@ -93,8 +93,10 @@ def _to_dataframe(_type='dataframe',
         def helper(clase, *args, **kwargs):
             if _type == 'dataframe':
                 _df = DataFrame(func(clase, *args, **kwargs))
-                if list(_df.columns) == [0]:
+                if list(_df.columns) == [0] and len(args) > 0:
                     _df.columns = [args[0]]
+                elif list(_df.columns) == [0] and len(kwargs) > 0:
+                    _df.columns = [kwargs[list(kwargs.keys())[0]]]
                 if _parse_dates is not None:
                     for _col in _parse_dates:
                         try:
