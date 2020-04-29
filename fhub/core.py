@@ -18,14 +18,14 @@
 
 from datetime import datetime
 from time import sleep as _sleep
-
+from functools import wraps
 import pandas as pd
 import requests
 
 from .utils import FinnhubError
 from .utils import _json_to_df_candle, _rename_quote, _check_resolution
 from .utils import _to_dataframe, _check_kind, _recursive
-from .utils import _unixtime
+from .utils import _unixtime, _normalize_date
 
 
 class Session:
@@ -79,12 +79,15 @@ class Session:
         else:
             raise FinnhubError(r.content.decode("utf-8"))
 
+
+# --------------------- Stock Fundamentals --------------------- #
+
     @_check_kind
     @_to_dataframe()
     def exchanges(self,
                   kind='stock'):
         """
-        List supported exchanges.
+        Get a list supported exchanges.
         :param kind: Kind of exchanges, default stock. Available: stock, forex, crypto.
         :return: dataframe with name, code and currency of exchanges.
         """
@@ -96,11 +99,65 @@ class Session:
     def symbols(self,
                 exchange,
                 kind='stock'):
+        """
+        Get a list supported symbols for a exchange.
+        :param exchange: str, exchange to get the symbols.
+        :param kind: str, Kind of the exchange, default stock. Available: stock, forex, crypto.
+        :return: pandas dataframe, list of symbols with description and name.
+        """
         _endpoint = f"{kind}/symbol"
         params = {
             'exchange': exchange
         }
         return self._request(_endpoint, params)
+
+    @_to_dataframe()
+    def profile(
+            self,
+            symbol=None,
+            isin=None,
+            cusip=None
+    ):
+        """NOT TESTED, premium needed"""
+        _ticker = {
+            'symbol': symbol,
+            'isin': isin,
+            'cusip': cusip
+        }
+
+        if not any(_ticker.values()):
+            print('You must pass one of symbol, isin or cusip')
+            return
+
+        params = {k: v for k, v in _ticker.items() if v}
+        if len(params) > 1:
+            print('You must pass only one of symbol, isin or cusip')
+            return
+
+        _endpoint = f"news/profile"
+        return self._request(_endpoint, params)
+
+    def executive(
+            self,
+            symbol
+    ):
+        """
+        Get a list of company's executives and members of the Board.
+        :param symbol: str, symbol of the company.
+        :return: pandas dataframe, list of company's executives.
+        """
+        _endpoint = 'stock/executive'
+        params = {'symbol': symbol}
+
+        _json = self._request(
+            _endpoint,
+            params
+        )
+        return pd.json_normalize(
+            _json,
+            record_path='executive',
+            meta='symbol',
+        )
 
     @_to_dataframe()
     def news(self,
@@ -121,30 +178,58 @@ class Session:
         _endpoint = f"news/{symbol}"
         return self._request(_endpoint)
 
-    @_to_dataframe()
-    def profile(
+    @_to_dataframe(_parse_dates=['datetime'])
+    def major_development(
             self,
-            symbol=None,
-            isin=None,
-            cusip=None
+            symbol,
+            start=None,
+            end=None
     ):
-        _ticker = {
-            'symbol': symbol,
-            'isin': isin,
-            'cusip': cusip
-        }
+        _endpoint = "major-development"
+        params = {'symbol': symbol}
+        if start is not None:
+            params.update({'from': _normalize_date(start)})
+        if end is not None:
+            params.update({'from': _normalize_date(end)})
 
-        if not any(_ticker.values()):
-            print('You must pass one of symbol, isin or cusip')
-            return
+        return self._request(
+            _endpoint,
+            params
+        )['majorDevelopment']
 
-        params = {k: v for k, v in _ticker.items() if v}
-        if len(params) > 1:
-            print('You must pass only one of symbol, isin or cusip')
-            return
+    @_recursive
+    def sentiment(
+            self,
+            symbol
+    ):
+        _endpoint = 'news-sentiment'
+        params = {'symbol': symbol}
 
-        _endpoint = f"news/profile"
-        return self._request(_endpoint, params)
+        _json = self._request(
+            _endpoint,
+            params
+        )
+        return pd.json_normalize(_json).T.rename(
+            columns={0: _json['symbol']}
+        )
+
+    @_recursive
+    def peers(
+            self,
+            symbol
+    ):
+        """
+        Get company peers. Return a list of peers in the same country and GICS sub-industry
+        :param symbol: symbol of the company
+        :return: list of peers symbols
+        """
+        _endpoint = 'stock/peers'
+        params = {'symbol': symbol}
+
+        return self._request(
+            _endpoint,
+            params
+        )
 
     @_recursive
     def metrics(
@@ -227,76 +312,44 @@ class Session:
         _funds['kind'] = 'FUND'
         return pd.concat([_invs, _funds])
 
-    def executive(
-            self,
-            symbol
-    ):
-        _endpoint = 'stock/executive'
-        params = {'symbol': symbol}
+    #TODO  premium needed
+    def financials(self,
+                   symbol,
+                   freq):
+        _endpoint = "stock/financials"
+        pass
 
-        _json = self._request(
-            _endpoint,
-            params
-        )
-        return pd.json_normalize(
-            _json,
-            record_path='executive',
-            meta='symbol',
-        )
-
-    @_recursive
-    def sentiment(
-            self,
-            symbol
-    ):
-        _endpoint = 'news-sentiment'
-        params = {'symbol': symbol}
-
-        _json = self._request(
-            _endpoint,
-            params
-        )
-        return pd.json_normalize(_json).T.rename(
-            columns={0: _json['symbol']}
-        )
-
-    @_recursive
-    def peers(
-            self,
-            symbol
-    ):
+    @_to_dataframe(_parse_dates=['date'],
+                   _index=['date'])
+    def calendar_ipo(self,
+                     start=None,
+                     end=None):
         """
-        Get company peers. Return a list of peers in the same country and GICS sub-industry
-        :param symbol: symbol of the company
-        :return: list of peers symbols
+        Get recent and coming IPO.
+        :param start: str, from date, format "2020-12-31".
+        :param end: str, to date,  format "2020-12-31".
+        :return: pandas dataframe, calendar of recent and coming IPO
         """
-        _endpoint = 'stock/peers'
-        params = {'symbol': symbol}
-
+        _endpoint = "calendar/ipo"
+        if end is None:
+            end = datetime.now().strftime("%Y-%m-%d")
+        if start is None:
+            start = '1900-01-01'
+        params = {
+            'from': _normalize_date(start),
+            'to': _normalize_date(end)
+        }
         return self._request(
             _endpoint,
             params
-        )
+        )['ipoCalendar']
 
-    @_recursive
-    def upgrade_downgrade(
-            self,
-            symbol
-    ):
-        """
-        Get latest stock upgrade and downgrade
-        :param symbol: symbol of the company
-        :return: dataframe with latest stock upgrades/downgrades
-        """
-        _endpoint = 'stock/upgrade-downgrade'
-        params = {'symbol': symbol}
-        _json = self._request(
-            _endpoint,
-            params
-        )
-        _df = pd.DataFrame(_json)
-        _df['gradeTime'] = pd.to_datetime(_df['gradeTime'], unit='s')
-        return _df
+
+    # @wraps(calendar_ipo)
+    # def ipo(self, *args, **kwargs):
+    #     return self.calendar_ipo(*args, **kwargs)
+
+# --------------------- Stock Analysts --------------------- #
 
     @_recursive
     def recommendation(
@@ -338,34 +391,27 @@ class Session:
             params
         )
 
-    @_to_dataframe()
-    def economic_code(self):
-        _endpoint = "economic/code"
-        return self._request(_endpoint)
-
-    def economic(
+    @_recursive
+    def upgrade_downgrade(
             self,
-            economic_code,
-            get_unit=False
+            symbol
     ):
-        _endpoint = "economic"
-        params = {
-            'code': economic_code
-        }
-
+        """
+        Get latest stock upgrade and downgrade
+        :param symbol: symbol of the company
+        :return: dataframe with latest stock upgrades/downgrades
+        """
+        _endpoint = 'stock/upgrade-downgrade'
+        params = {'symbol': symbol}
         _json = self._request(
             _endpoint,
             params
         )
         _df = pd.DataFrame(_json)
-        _codes = self.economic_code()
-        _unit = 'value'
-        if get_unit:
-            _unit = _codes.set_index('code').loc[economic_code, 'unit']
-        _df.columns = ['date', _unit]
-        _df = _df.set_index('date')
-        _df.index = pd.to_datetime(_df.index)
+        _df['gradeTime'] = pd.to_datetime(_df['gradeTime'], unit='s')
         return _df
+
+    # --------------------- Stock Price --------------------- #
 
     @_recursive
     @_to_dataframe(_type='serie')
@@ -400,7 +446,7 @@ class Session:
         if end is None:
             end = datetime.now().strftime("%Y-%m-%d")
         if start is None:
-            start = '2000-01-01'
+            start = '1900-01-01'
 
         params = {
             'symbol': symbol,
@@ -427,3 +473,67 @@ class Session:
             else:
                 df = _json_to_df_candle(_json)
                 return df
+
+    # --------------------- Alternative Data --------------------- #
+
+    @_to_dataframe(_parse_dates=['updated'])
+    def covid19(self):
+        """
+        Get real-time updates on the number of COVID-19 (Corona virus) cases in the US with a state-by-state breakdown.
+        Data is sourced from CDC and reputable sources.
+        :return: pandas dataframe, COVID-19 data
+        """
+        _endpoint = 'covid19/us'
+        return self._request(_endpoint)
+
+
+    # --------------------- Economic --------------------- #
+
+    @_to_dataframe()
+    def economic_code(self):
+        """
+        List codes of supported economic data.
+        :return: pandas dataframe, list of codes
+        """
+        _endpoint = "economic/code"
+        return self._request(_endpoint)
+
+    @_to_dataframe(_parse_dates=['date'])
+    def economic(
+            self,
+            economic_code,
+            get_unit=False
+    ):
+        """
+        Get economic data.
+        :param economic_code: Finnhub code for economic data
+        :param get_unit: use unit of data as column name
+        :return: pandas dataframe with economic data
+        """
+        _endpoint = "economic"
+        params = {
+            'code': economic_code
+        }
+
+        _json = self._request(
+            _endpoint,
+            params
+        )
+        _df = pd.DataFrame(_json)
+        _codes = self.economic_code()
+        _unit = 'value'
+        if get_unit:
+            _unit = _codes.set_index('code').loc[economic_code, 'unit']
+        _df.columns = ['date', _unit]
+        _df = _df.set_index('date')
+        _df.index = pd.to_datetime(_df.index)
+        return _df
+
+    @_to_dataframe(_parse_dates=['date'])
+    def economic_calendar(self):
+        """
+        Get recent and coming economic releases.
+        :return: pandas dataframe with economic calendar
+        """
+        _endpoint = 'calendar/economic'
+        return self._request(_endpoint)['economicCalendar']['result']

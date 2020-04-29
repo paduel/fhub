@@ -85,7 +85,9 @@ def _json_to_df_candle(
 
 
 # Decorator to convert json to dataframe
-def _to_dataframe(_type='dataframe'):
+def _to_dataframe(_type='dataframe',
+                  _parse_dates=None,
+                  _index=None):
     def inner_function(func):
         @wraps(func)
         def helper(clase, *args, **kwargs):
@@ -93,6 +95,15 @@ def _to_dataframe(_type='dataframe'):
                 _df = DataFrame(func(clase, *args, **kwargs))
                 if list(_df.columns) == [0]:
                     _df.columns = [args[0]]
+                if _parse_dates is not None:
+                    for _col in _parse_dates:
+                        try:
+                            _df[_col] = to_datetime(_df[_col])
+                        except :
+                            print(f'Not possible parse dates of {_col}')
+                            pass
+                if _index is not None:
+                    _df = _df.set_index(_index)
             elif _type == 'serie':
                 _df = Series(func(clase, *args, **kwargs)).to_frame(args[0])
             else:
