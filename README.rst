@@ -3,7 +3,11 @@ Fhub
 ====
 Python client for Finnhub API
 =============================
+.. image:: https://img.shields.io/pypi/v/fhub?color=blue
+    :target: https://pypi.org/project/fhub/
+    :alt: PyPi version
 
+\
 A pythonic way to use the Finnanhub data API.
 
 This package is still in a very early stage of development, so it is still incomplete and may contain bugs. It should only be used to test its functionality.

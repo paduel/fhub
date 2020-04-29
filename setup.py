@@ -22,5 +22,21 @@ setup(
     author_email='paduel@gmail.com',
     description='Python client for Finnhub API ',
     long_description=long_description,
-    long_description_content_type='text/x-rst'
+    long_description_content_type='text/x-rst',
+    classifiers=[
+        'License :: OSI Approved :: Apache Software License',
+        'Development Status :: 3 - Alpha',
+        # 'Development Status :: 4 - Beta',
+        #'Development Status :: 5 - Production/Stable',
+        'Operating System :: OS Independent',
+        'Intended Audience :: Developers',
+        'Topic :: Office/Business :: Financial',
+        'Topic :: Office/Business :: Financial :: Investment',
+        'Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator',
+        'Topic :: Software Development :: Libraries',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+    ]
 )
