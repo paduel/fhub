@@ -29,6 +29,9 @@ from .utils import _unixtime, _normalize_date
 
 
 class Session:
+    """
+    Finnhub API client.  You need a valid API key from Finnhub.
+    """
     BASE_URL = 'https://finnhub.io/api/v1/'
     AVAILABLE_METRICS = [
         'price',
@@ -39,22 +42,24 @@ class Session:
         'financialStrength',
         'perShare'
     ]
-    """
-    Finnhub API client.  You need a valid API key from Finnhub.
-    """
+
 
     def __init__(
             self,
             key,
+            proxies=None,
             verbose=False
     ):
         self.key = key
         self.verbose = verbose
+        if proxies is not None:
+            assert isinstance(proxies, dict)
         self.session = self._init__session()
+        self.session.proxies = proxies
 
     @staticmethod
     def _init__session():
-        session = requests.session()
+        session = requests.Session()
         session.headers.update({'Accept': 'application/json',
                                 'User-Agent': 'finnhub/api'})
         return session
@@ -345,9 +350,9 @@ class Session:
         )['ipoCalendar']
 
 
-    # @wraps(calendar_ipo)
-    # def ipo(self, *args, **kwargs):
-    #     return self.calendar_ipo(*args, **kwargs)
+    @wraps(calendar_ipo)
+    def ipos(self, *args, **kwargs):
+        return self.calendar_ipo(*args, **kwargs)
 
 # --------------------- Stock Analysts --------------------- #
 
