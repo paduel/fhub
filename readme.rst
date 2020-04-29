@@ -25,14 +25,14 @@ You need a Finnhub API Key, you can get free one, at https://finnhub.io.
 
 .. code:: python
 
-    from fhub import Session    
+    from fhub import Session
     hub = Session(<your API Key here>)
     
     # Download prices time serie of Tesla.
-    tsla = hub.candle('TSLA') 
+    tsla = hub.candle('TSLA')
    
     # Download prices for several tickers from a date.
-    data = hub.condle(['AMZN', 'NFLX', 'DIS'], start="2018-01-01")
+    data = hub.candle(['AMZN', 'NFLX', 'DIS'], start="2018-01-01")
 
 
 Documentation
