@@ -55,7 +55,7 @@ Real-time subscription via Finnhub's websocket is easy using fhub, even using cu
 
 .. code:: python
 
-    from fhub.real_time import Subscription
+    from fhub import Subscription
     from time import sleep
 
     def price_monitor(ticker):
@@ -78,7 +78,7 @@ Real-time subscription via Finnhub's websocket is easy using fhub, even using cu
                 )
 
     # Subscription is maintained for 20 seconds and then closed.
-    for f in range(120):
+    for f in range(20):
         sleep(1)
     subs.close()
 

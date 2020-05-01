@@ -15,7 +15,7 @@ with open(path.join(this_directory, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='fhub',
-    version='0.0.2',
+    version='0.0.4',
     packages=['fhub'],
     url='https://github.com/paduel/fhub',
     license='Apache 2.0',
