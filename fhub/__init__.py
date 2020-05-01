@@ -16,9 +16,10 @@
 # limitations under the License.
 #
 
-__version__ = "0.1.02"
+__version__ = "0.0.2"
 __author__ = "Paduel (Antonio Rodríguez)"
 
 from .core import Session
+from .real_time import Ticker, Subscription
 
-__all__ = ['Session']
+__all__ = ['Session', 'Ticker', 'Subscription']

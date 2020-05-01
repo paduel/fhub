@@ -5,8 +5,9 @@
 # https://github.com/paduel/fhub
 
 
-from setuptools import setup
 from os import path
+
+from setuptools import setup
 
 this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.rst'), encoding='utf-8') as f:
@@ -14,7 +15,7 @@ with open(path.join(this_directory, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='fhub',
-    version='0.0.1',
+    version='0.0.2',
     packages=['fhub'],
     url='https://github.com/paduel/fhub',
     license='Apache 2.0',
