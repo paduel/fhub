@@ -42,7 +42,7 @@ You need a Finnhub API Key, you can get free one, at https://finnhub.io.
 .. code:: python
 
     from fhub import Session
-    hub = Session(<your API Key here>)
+    hub = Session("your_finnhub_api_key_here")
     
     # Download prices time serie of Tesla.
     tsla = hub.candle('TSLA')
@@ -70,14 +70,14 @@ Real-time subscription via Finnhub's websocket is easy using fhub, even using cu
         return
 
     # Create a subscription and connect
-    subs = Subscription()
+    subs = Subscription("your_finnhub_api_key_here")
     # A list of the symbols to which to subscribe is passed
     # Created function  is assigned as a callback when a new tick is received
     subs.connect(["BINANCE:BTCUSDT", "IC MARKETS:1", "AAPL"],
                  on_tick=price_monitor
                 )
 
-    # The subscription is maintained for 20 seconds and then closed.
+    # Subscription is maintained for 20 seconds and then closed.
     for f in range(120):
         sleep(1)
     subs.close()

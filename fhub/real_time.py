@@ -44,10 +44,10 @@ class Ticker:
 class Subscription:
     """Stream real-time trades for US stocks, forex and crypto."""
 
-    def __init__(self, token):
-        self.token = token
+    def __init__(self, key):
+        self.key = key
         self.data = None
-        self.ws_url = f"wss://ws.finnhub.io?token={self.token}"
+        self.ws_url = f"wss://ws.finnhub.io?token={self.key}"
         self.on_tick = None
         self.tickers = None
         self.max_history = 0
