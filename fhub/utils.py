@@ -154,4 +154,4 @@ def _normalize_date(date):
 
 def _unixtime(date):
     assert isinstance(date, str)
-    return datetime.strptime(_normalize_date(date), "%Y-%m-%d").strftime("%s")
+    return datetime.strptime(_normalize_date(date), "%Y-%m-%d").timestamp()
