@@ -413,7 +413,7 @@ class Session:
             params
         )
         _df = pd.DataFrame(_json)
-        _df['gradeTime'] = pd.to_datetime(_df['gradeTime'], unit='s')
+        _df['gradeTime'] = pd.to_datetime(_df['gradeTime'], unit='s', utc=True)
         return _df
 
     # --------------------- Stock Price --------------------- #
