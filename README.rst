@@ -50,6 +50,10 @@ You need a Finnhub API Key, you can get free one, at https://finnhub.io.
     # Download prices for several tickers from a date.
     data = hub.candle(['AMZN', 'NFLX', 'DIS'], start="2018-01-01")
 
+    # Download prices and bollinger bands indicator for several tickers.
+    data = hub.indicator(['AAPL', 'MSFT'], start='2019-01-01', indicator='bbands',
+                     indicator_fields={'timeperiod': 10})
+
 
 Real-time subscription via Finnhub's websocket is easy using fhub, even using custom functions for each tick received.
 

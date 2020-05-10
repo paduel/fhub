@@ -101,7 +101,7 @@ def _to_dataframe(_type='dataframe',
                 if _parse_dates is not None:
                     for _col in _parse_dates:
                         try:
-                            _df[_col] = to_datetime(_df[_col])
+                            _df[_col] = to_datetime(_df[_col], unit='s')
                         except :
                             print(f'Not possible parse dates of {_col}')
                             pass

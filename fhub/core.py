@@ -21,7 +21,7 @@ from functools import wraps
 from time import sleep as _sleep
 
 import requests
-from pandas import concat, read_pickle, json_normalize, \
+from pandas import concat, json_normalize, \
     DataFrame, to_datetime
 
 from .utils import FinnhubError
@@ -45,6 +45,7 @@ class Session:
         'financialStrength',
         'perShare'
     ]
+    _premium_msg = 'Premium Account Only. Please upgrade to help keep Finnhub free for everyone.'
 
     def __init__(
             self,
@@ -58,7 +59,7 @@ class Session:
             assert isinstance(proxies, dict)
         self.session = self._init__session()
         self.session.proxies = proxies
-        self.ind_info = read_pickle('indicator_info')
+        # self.ind_info = read_pickle(resource_filename('fhub', 'indicator_info'))
 
     @staticmethod
     def _init__session():
@@ -83,7 +84,10 @@ class Session:
             print(r.status_code)
             print(r.content)
         if r.ok:
-            return r.json()
+            if r.text == self._premium_msg:
+                raise Exception(self._premium_msg)
+            else:
+                return r.json()
         else:
             raise FinnhubError(r.content.decode("utf-8"))
 
@@ -177,13 +181,23 @@ class Session:
         }
         return self._request(_endpoint, params)
 
-    @_to_dataframe()
+    @_to_dataframe(_parse_dates=['datetime'])
     def company_news(
             self,
-            symbol
+            symbol,
+            start=None,
+            end=None
     ):
-        _endpoint = f"news/{symbol}"
-        return self._request(_endpoint)
+        _endpoint = "company-news"
+        params = {'symbol': symbol}
+        if start is not None:
+            params.update({'from': _normalize_date(start)})
+        else:
+            params.update({'from': "2019-01-01"})
+        if end is not None:
+            params.update({'to': _normalize_date(end)})
+
+        return self._request(_endpoint, params)
 
     @_to_dataframe(_parse_dates=['datetime'])
     def major_development(
@@ -197,7 +211,7 @@ class Session:
         if start is not None:
             params.update({'from': _normalize_date(start)})
         if end is not None:
-            params.update({'from': _normalize_date(end)})
+            params.update({'to': _normalize_date(end)})
 
         return self._request(
             _endpoint,
