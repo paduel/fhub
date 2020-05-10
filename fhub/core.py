@@ -60,7 +60,7 @@ class Session:
             assert isinstance(proxies, dict)
         self.session = self._init__session()
         self.session.proxies = proxies
-        self.ind_info = read_pickle(resource_filename('fhub', 'indicator_info'))
+        self.ind_info = read_pickle(resource_filename('fhub', 'indicator_info.pkl'))
 
     @staticmethod
     def _init__session():
