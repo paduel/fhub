@@ -22,7 +22,8 @@ from time import sleep as _sleep
 
 import requests
 from pandas import concat, json_normalize, \
-    DataFrame, to_datetime
+    DataFrame, to_datetime, read_pickle
+from pkg_resources import resource_filename
 
 from .utils import FinnhubError
 from .utils import _json_to_df_candle, _rename_quote, _check_resolution
@@ -59,7 +60,7 @@ class Session:
             assert isinstance(proxies, dict)
         self.session = self._init__session()
         self.session.proxies = proxies
-        # self.ind_info = read_pickle(resource_filename('fhub', 'indicator_info'))
+        self.ind_info = read_pickle(resource_filename('fhub', 'indicator_info'))
 
     @staticmethod
     def _init__session():
