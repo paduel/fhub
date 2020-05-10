@@ -16,10 +16,11 @@
 # limitations under the License.
 #
 
-from pandas import DataFrame, Series
-from pandas import to_datetime, concat
-from functools import wraps
 from datetime import datetime
+from functools import wraps
+
+from pandas import DataFrame, Series
+from pandas import to_datetime, concat, NA
 
 
 class Error(Exception):
@@ -142,9 +143,12 @@ def _recursive(func):
                 if _df.columns.nlevels == 2:
                     if all(_df.columns.get_level_values(0) == _df.columns.get_level_values(1)):
                         _df = _df.droplevel(0, 1)
+                    elif _df.columns.get_level_values(0).dtype == int:
+                        _df = _df.swaplevel(0, 1, 1).sort_index(1)
                 return _df
             else:
                 return _dfs
+
     return helper
 
 
@@ -152,6 +156,23 @@ def _normalize_date(date):
     assert isinstance(date, str)
     return date.replace('/', '-').replace('.', '-').replace(' ', '-')
 
+
 def _unixtime(date):
     assert isinstance(date, str)
-    return datetime.strptime(_normalize_date(date), "%Y-%m-%d").timestamp()
+    return int(datetime.strptime(_normalize_date(date), "%Y-%m-%d").timestamp())
+
+
+def _normalize_indicator_schema(schema):
+    for indicator_name, indicator_params in schema.items():
+        indicator, params = indicator_params
+        schema[indicator_name] = (
+            indicator,
+            {k: v if not isinstance(v, str) else v[0]
+             for k, v in params.items()})
+    return schema
+
+
+def _to_time_cols(df):
+    col_time = df.columns[df.columns.str.lower().str.contains('time')]
+    df[col_time] = df[col_time].replace(0, NA).apply(lambda x: to_datetime(x, unit='s'))
+    return df
