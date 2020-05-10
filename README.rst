@@ -99,5 +99,5 @@ Official documentation of the API REST of Finnhub:
 
 https://finnhub.io/docs/api
 
-Only some of the functions available in the REST API have been implemented yet.
+Most of the functions available in the REST API have been implemented.
     
