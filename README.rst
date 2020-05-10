@@ -20,7 +20,7 @@ Python client for Finnhub API
     :alt: contributions welcome
 
 \
-A pythonic way to use the Finnanhub data API.
+A pythonic way to use the Finnhub data API.
 
 This package is still in a very early stage of development, so it is still incomplete and may contain bugs. It should only be used to test its functionality.
 \
