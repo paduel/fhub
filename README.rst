@@ -37,7 +37,7 @@ Installation
 Quick start
 ~~~~~~~~~~~
 
-You need a Finnhub API Key, you can get free one, at https://finnhub.io.  
+You need a Finnhub API Key, you can get free one, at https://finnhub.io.  For some data a premium account is necessary.
 
 .. code:: python
 
