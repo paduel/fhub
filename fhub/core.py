@@ -147,6 +147,31 @@ class Session:
 
         _endpoint = f"stock/profile"
         return self._request(_endpoint, params)
+		
+	def profile2(
+		self,
+		symbol=None,
+		isin=None,
+		cusip=None
+    ):
+
+        _ticker = {
+            'symbol': symbol,
+            'isin': isin,
+            'cusip': cusip
+        }
+
+        if not any(_ticker.values()):
+            print('You must pass one of symbol, isin or cusip')
+            return
+
+        params = {k: v for k, v in _ticker.items() if v}
+        if len(params) > 1:
+            print('You must pass only one of symbol, isin or cusip')
+            return
+
+        _endpoint = f"stock/profile2"
+        return self._request(_endpoint, params)
 
     def executive(
             self,
