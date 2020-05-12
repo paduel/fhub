@@ -20,7 +20,7 @@ Python client for Finnhub API
     :alt: contributions welcome
 
 \
-A pythonic way to use the Finnanhub data API.
+A pythonic way to use the Finnhub data API.
 
 This package is still in a very early stage of development, so it is still incomplete and may contain bugs. It should only be used to test its functionality.
 \
@@ -37,7 +37,7 @@ Installation
 Quick start
 ~~~~~~~~~~~
 
-You need a Finnhub API Key, you can get free one, at https://finnhub.io.  
+You need a Finnhub API Key, you can get free one, at https://finnhub.io.  For some data a premium account is necessary.
 
 .. code:: python
 
@@ -49,6 +49,10 @@ You need a Finnhub API Key, you can get free one, at https://finnhub.io.
    
     # Download prices for several tickers from a date.
     data = hub.candle(['AMZN', 'NFLX', 'DIS'], start="2018-01-01")
+
+    # Download prices and bollinger bands indicator for several tickers.
+    data = hub.indicator(['AAPL', 'MSFT'], start='2019-01-01', indicator='bbands',
+                     indicator_fields={'timeperiod': 10})
 
 
 Real-time subscription via Finnhub's websocket is easy using fhub, even using custom functions for each tick received.
@@ -95,5 +99,5 @@ Official documentation of the API REST of Finnhub:
 
 https://finnhub.io/docs/api
 
-Only some of the functions available in the REST API have been implemented yet.
+Most of the functions available in the REST API have been implemented.
     

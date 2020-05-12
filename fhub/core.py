@@ -17,15 +17,19 @@
 #
 
 from datetime import datetime
-from time import sleep as _sleep
 from functools import wraps
-import pandas as pd
+from time import sleep as _sleep
+
 import requests
+from pandas import concat, json_normalize, \
+    DataFrame, to_datetime, read_pickle
+from pkg_resources import resource_filename
 
 from .utils import FinnhubError
 from .utils import _json_to_df_candle, _rename_quote, _check_resolution
+from .utils import _normalize_indicator_schema
 from .utils import _to_dataframe, _check_kind, _recursive
-from .utils import _unixtime, _normalize_date
+from .utils import _unixtime, _normalize_date, _to_time_cols
 
 
 class Session:
@@ -42,8 +46,7 @@ class Session:
         'financialStrength',
         'perShare'
     ]
-
-
+    _premium_msg = 'Premium Account Only. Please upgrade to help keep Finnhub free for everyone.'
 
     def __init__(
             self,
@@ -57,6 +60,7 @@ class Session:
             assert isinstance(proxies, dict)
         self.session = self._init__session()
         self.session.proxies = proxies
+        self.ind_info = read_pickle(resource_filename('fhub', 'indicator_info.pkl'))
 
     @staticmethod
     def _init__session():
@@ -81,7 +85,10 @@ class Session:
             print(r.status_code)
             print(r.content)
         if r.ok:
-            return r.json()
+            if r.text == self._premium_msg:
+                raise Exception(self._premium_msg)
+            else:
+                return r.json()
         else:
             raise FinnhubError(r.content.decode("utf-8"))
 
@@ -158,7 +165,7 @@ class Session:
             _endpoint,
             params
         )
-        return pd.json_normalize(
+        return json_normalize(
             _json,
             record_path='executive',
             meta='symbol',
@@ -175,13 +182,23 @@ class Session:
         }
         return self._request(_endpoint, params)
 
-    @_to_dataframe()
+    @_to_dataframe(_parse_dates=['datetime'])
     def company_news(
             self,
-            symbol
+            symbol,
+            start=None,
+            end=None
     ):
-        _endpoint = f"news/{symbol}"
-        return self._request(_endpoint)
+        _endpoint = "company-news"
+        params = {'symbol': symbol}
+        if start is not None:
+            params.update({'from': _normalize_date(start)})
+        else:
+            params.update({'from': "2019-01-01"})
+        if end is not None:
+            params.update({'to': _normalize_date(end)})
+
+        return self._request(_endpoint, params)
 
     @_to_dataframe(_parse_dates=['datetime'])
     def major_development(
@@ -195,7 +212,7 @@ class Session:
         if start is not None:
             params.update({'from': _normalize_date(start)})
         if end is not None:
-            params.update({'from': _normalize_date(end)})
+            params.update({'to': _normalize_date(end)})
 
         return self._request(
             _endpoint,
@@ -214,7 +231,7 @@ class Session:
             _endpoint,
             params
         )
-        return pd.json_normalize(_json).T.rename(
+        return json_normalize(_json).T.rename(
             columns={0: _json['symbol']}
         )
 
@@ -252,7 +269,7 @@ class Session:
             _endpoint,
             params
         )
-        _df = pd.DataFrame.from_dict(_json['metric'], orient='index')
+        _df = DataFrame.from_dict(_json['metric'], orient='index')
         _df.columns = [_json['symbol']]
         return _df
 
@@ -265,7 +282,7 @@ class Session:
         for _metric in self.available_metrics:
             _metrics[_metric] = self.metrics(symbol, _metric)
             _sleep(0.1)
-        return pd.concat(_metrics)
+        return concat(_metrics)
 
     def investor_ownership(
             self,
@@ -280,7 +297,7 @@ class Session:
             _endpoint,
             params
         )
-        _df = pd.json_normalize(
+        _df = json_normalize(
             _json,
             record_path='ownership',
             meta='symbol',
@@ -300,7 +317,7 @@ class Session:
             _endpoint,
             params
         )
-        _df = pd.json_normalize(
+        _df = json_normalize(
             _json,
             record_path='ownership',
             meta='symbol',
@@ -315,9 +332,9 @@ class Session:
         _funds = self.fund_ownership(symbol)
         _invs['kind'] = 'INVESTOR'
         _funds['kind'] = 'FUND'
-        return pd.concat([_invs, _funds])
+        return concat([_invs, _funds])
 
-    #TODO  premium needed
+    # TODO  premium needed
     def financials(self,
                    symbol,
                    freq):
@@ -349,7 +366,6 @@ class Session:
             params
         )['ipoCalendar']
 
-
     @wraps(calendar_ipo)
     def ipos(self, *args, **kwargs):
         return self.calendar_ipo(*args, **kwargs)
@@ -369,12 +385,12 @@ class Session:
         _endpoint = 'stock/recommendation'
         params = {'symbol': symbol}
 
-        _df = pd.DataFrame(self._request(
+        _df = DataFrame(self._request(
             _endpoint,
             params
         ))
 
-        _df['period'] = pd.to_datetime(_df['period'])
+        _df['period'] = to_datetime(_df['period'])
         return _df.set_index('period')[['strongBuy', 'buy', 'hold', 'sell', 'strongSell']]
 
     @_recursive
@@ -491,7 +507,6 @@ class Session:
         _endpoint = 'covid19/us'
         return self._request(_endpoint)
 
-
     # --------------------- Economic --------------------- #
 
     @_to_dataframe()
@@ -524,14 +539,14 @@ class Session:
             _endpoint,
             params
         )
-        _df = pd.DataFrame(_json)
+        _df = DataFrame(_json)
         _codes = self.economic_code()
         _unit = 'value'
         if get_unit:
             _unit = _codes.set_index('code').loc[economic_code, 'unit']
         _df.columns = ['date', _unit]
         _df = _df.set_index('date')
-        _df.index = pd.to_datetime(_df.index)
+        _df.index = to_datetime(_df.index)
         return _df
 
     @_to_dataframe(_parse_dates=['date'])
@@ -542,3 +557,150 @@ class Session:
         """
         _endpoint = 'calendar/economic'
         return self._request(_endpoint)['economicCalendar']['result']
+
+    # --------------------- Technical analysis --------------------- #
+
+    def indicator_info(self, indicator):
+        print('\n'.join([k + ": " + v
+                         for k, v in self.ind_info.loc[indicator].to_dict().items()]))
+
+    @_recursive
+    @_check_kind
+    def indicator(
+            self,
+            symbol,
+            start=None,
+            end=None,
+            resolution='D',
+            indicator='sma',
+            indicator_fields=None,
+            only_indicator=False
+    ):
+        if not _check_resolution(resolution):
+            return
+        if end is None:
+            end = datetime.now().strftime("%Y-%m-%d")
+        if start is None:
+            start = '1900-01-01'
+
+        params = {
+            'symbol': symbol,
+            'resolution': resolution,
+            'from': _unixtime(start),
+            'to': _unixtime(end),
+            'indicator': indicator
+        }
+
+        if indicator_fields is not None:
+            if not isinstance(indicator_fields, dict):
+                raise Exception('Dictionary with fields names and values must be passed')
+            else:
+                params.update(indicator_fields)
+        _endpoint = f'indicator'
+        _json = self._request(
+            _endpoint,
+            params
+        )
+        if self.verbose:
+            print(_json)
+        if _json is None:
+            return None
+        else:
+            if _json['s'] == 'no_data':
+                print(f"{params['symbol']} :  Data no available.")
+                return None
+            else:
+                df = _json_to_df_candle(_json)
+                df = df[df.abs().cumsum() > 0]
+                if only_indicator:
+                    df = df.drop(['close', 'high', 'low', 'open', 'volume'], axis=1)
+                return df
+
+    def indicators_bulk(self,
+                        symbol,
+                        start=None,
+                        end=None,
+                        resolution='D',
+                        indicators_schema=None,
+                        ):
+        if not _check_resolution(resolution):
+            return
+        data = {}
+        only_indicator = False
+        indicators_schema = _normalize_indicator_schema(indicators_schema)
+        for indicator_name, indicator_params in indicators_schema.items():
+            indicator, params = indicator_params
+            name = indicator_name if only_indicator else 'price'
+            data[name] = self.indicator(symbol,
+                                        start=start,
+                                        end=end,
+                                        resolution=resolution,
+                                        indicator=indicator,
+                                        indicator_fields=params,
+                                        only_indicator=only_indicator)
+            if not only_indicator:
+                price_cols = ['close', 'high', 'low', 'open', 'volume']
+                data[indicator_name] = data[name].drop(price_cols, axis=1)
+                data[name] = data[name][price_cols]
+                only_indicator = True
+        return concat(data, axis=1)
+
+    @_recursive
+    def pattern(self,
+                symbol,
+                resolution='D'):
+        """
+        Run pattern recognition algorithm on symbols. Support double top/bottom, triple top/bottom, head and shoulders, triangle, wedge, channel, flag, and candlestick patterns.
+        :param symbol: symbol or list of symbols
+        :param resolution: Supported resolution includes 1, 5, 15, 30, 60, D, W, M .Some timeframes might not be available depending on the exchange.
+        :return: dataframe of patterns
+        """
+        if not _check_resolution(resolution):
+            return
+        endpoint = 'scan/pattern'
+        params = dict(
+            symbol=symbol,
+            resolution=resolution
+        )
+        _json = self._request(endpoint, params)
+        return _to_time_cols(DataFrame(_json['points'])).T
+
+    @_recursive
+    @_to_dataframe('serie')
+    def support_resistance(self,
+                           symbol,
+                           resolution='D'):
+        """
+        Get support and resistance levels for symbols.
+        :param symbol: symbol or list of symbols
+        :param resolution: Supported resolution includes 1, 5, 15, 30, 60, D, W, M .Some timeframes might not be available depending on the exchange.
+        :return: dataframe of support and resistance levels
+        """
+        if not _check_resolution(resolution):
+            return
+        endpoint = 'scan/support-resistance'
+        params = dict(
+            symbol=symbol,
+            resolution=resolution
+        )
+        return self._request(endpoint, params)['levels']
+
+    @_recursive
+    def technical_indicator(self,
+                            symbol,
+                            resolution='D'):
+        """
+        Get aggregate signal of multiple technical indicators such as MACD, RSI, Moving Average v.v.
+        :param symbol: symbol or list of symbols
+        :param resolution: Supported resolution includes 1, 5, 15, 30, 60, D, W, M .Some timeframes might not be available depending on the exchange.
+        :return: dataframe of signals
+        """
+        if not _check_resolution(resolution):
+            return
+        endpoint = 'scan/technical-indicator'
+        params = dict(
+            symbol=symbol,
+            resolution=resolution
+        )
+        _json = self._request(endpoint, params)
+        return json_normalize(_json).T.rename(columns={0: symbol})
