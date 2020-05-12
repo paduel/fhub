@@ -115,8 +115,7 @@ class Session:
             'exchange': exchange
         }
         return self._request(_endpoint, params)
-
-    @_to_dataframe()
+	
     def profile(
             self,
             symbol=None,
@@ -139,7 +138,7 @@ class Session:
             print('You must pass only one of symbol, isin or cusip')
             return
 
-        _endpoint = f"news/profile"
+        _endpoint = f"stock/profile"
         return self._request(_endpoint, params)
 
     def executive(
