@@ -372,7 +372,7 @@ class Session:
                                symbol=None,
                                cik=None,
                                access_number=None,
-                               freq='annnual'):
+                               freq='annual'):
         """
         Get financials as reported.
         :param symbol: str, Symbol of the company.
