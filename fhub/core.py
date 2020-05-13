@@ -122,8 +122,7 @@ class Session:
             'exchange': exchange
         }
         return self._request(_endpoint, params)
-
-    @_to_dataframe()
+	
     def profile(
             self,
             symbol=None,
@@ -146,7 +145,32 @@ class Session:
             print('You must pass only one of symbol, isin or cusip')
             return
 
-        _endpoint = f"news/profile"
+        _endpoint = f"stock/profile"
+        return self._request(_endpoint, params)
+		
+	def profile2(
+		self,
+		symbol=None,
+		isin=None,
+		cusip=None
+    ):
+
+        _ticker = {
+            'symbol': symbol,
+            'isin': isin,
+            'cusip': cusip
+        }
+
+        if not any(_ticker.values()):
+            print('You must pass one of symbol, isin or cusip')
+            return
+
+        params = {k: v for k, v in _ticker.items() if v}
+        if len(params) > 1:
+            print('You must pass only one of symbol, isin or cusip')
+            return
+
+        _endpoint = f"stock/profile2"
         return self._request(_endpoint, params)
 
     def executive(
@@ -428,8 +452,8 @@ class Session:
             _endpoint,
             params
         )
-        _df = DataFrame(_json)
-        _df['gradeTime'] = to_datetime(_df['gradeTime'], unit='s')
+        _df = pd.DataFrame(_json)
+        _df['gradeTime'] = pd.to_datetime(_df['gradeTime'], unit='s', utc=True)
         return _df
 
     # --------------------- Stock Price --------------------- #

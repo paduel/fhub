@@ -68,7 +68,7 @@ def _rename_candle_columns(df):
 
 
 def _rename_quote(quotes):
-    quotes['t'] = to_datetime(quotes['t'], unit='s')
+    quotes['t'] = to_datetime(quotes['t'], unit='s', utc=True)
     return {names_dict[k]: v for k, v in quotes.items()}
 
 
@@ -77,7 +77,7 @@ def _json_to_df_candle(
 ):
     df = DataFrame(_json)
     df = df.set_index(
-        to_datetime(df['t'], unit='s'),
+        to_datetime(df['t'], unit='s', utc=True),
     )
     df = df.drop(['t', 's'], axis=1)
     df = _rename_candle_columns(df)
