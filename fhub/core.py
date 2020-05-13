@@ -21,13 +21,13 @@ from functools import wraps
 from time import sleep as _sleep
 
 import requests
-from pandas import concat, json_normalize, \
-    DataFrame, to_datetime, read_pickle
+from pandas import concat, json_normalize, DataFrame, Series, to_datetime, read_pickle
 from pkg_resources import resource_filename
 
 from .utils import FinnhubError
 from .utils import _json_to_df_candle, _rename_quote, _check_resolution
 from .utils import _normalize_indicator_schema
+from .utils import _only_one_var
 from .utils import _to_dataframe, _check_kind, _recursive
 from .utils import _unixtime, _normalize_date, _to_time_cols
 
@@ -87,6 +87,8 @@ class Session:
         if r.ok:
             if r.text == self._premium_msg:
                 raise Exception(self._premium_msg)
+            elif r.text == 'Missing parameters':
+                raise Exception('Missing parameters')
             else:
                 return r.json()
         else:
@@ -122,7 +124,7 @@ class Session:
             'exchange': exchange
         }
         return self._request(_endpoint, params)
-	
+
     def profile(
             self,
             symbol=None,
@@ -147,12 +149,13 @@ class Session:
 
         _endpoint = f"stock/profile"
         return self._request(_endpoint, params)
-		
-	def profile2(
-		self,
-		symbol=None,
-		isin=None,
-		cusip=None
+
+    @_to_dataframe('serie')
+    def profile2(
+            self,
+            symbol=None,
+            isin=None,
+            cusip=None
     ):
 
         _ticker = {
@@ -195,7 +198,7 @@ class Session:
             meta='symbol',
         )
 
-    @_to_dataframe()
+    @_to_dataframe(_parse_dates=['datetime'])
     def news(self,
              category='general',
              minid=0):
@@ -365,6 +368,69 @@ class Session:
         _endpoint = "stock/financials"
         pass
 
+    def financials_as_reported(self,
+                               symbol=None,
+                               cik=None,
+                               access_number=None,
+                               freq='annnual'):
+        """
+        Get financials as reported.
+        :param symbol: str, Symbol of the company.
+        :param cik: int, CIK of the company.
+        :param access_number: str, Access number of a specific report you want to retrieve financials from..
+        :param freq: str, Frequency. Can be either annual or quarterly. Default to annual.
+        :return:
+        """
+        assert _only_one_var(symbol, cik, access_number), "One of symbol, cik or access_number must be passed"
+        _endpoint = "/stock/financials-reported"
+        assert (freq in ['annual', 'quarterly']), 'freq must be annual or quarterly'
+        params = {'freq': freq}
+        if symbol is not None:
+            params.update({'symbol': symbol})
+        if cik is not None:
+            params.update({'cik': cik})
+        if access_number is not None:
+            params.update({'accessNumber': access_number})
+        _json = self._request(
+            _endpoint,
+            params
+        )
+        _data = DataFrame(_json['data'])
+        _report = _data.pop('report').apply(Series)
+        _data = concat([_data, _report], axis=1)
+        if access_number is not None:
+            _data = _data.T
+        return _data
+
+    def filings(self,
+                symbol=None,
+                cik=None,
+                access_number=None):
+        """
+        List company's filing.
+        :param symbol: str, Symbol of the company. Leave symbol,cik and accessNumber empty to list latest filings.
+        :param cik: int, CIK of the company.
+        :param access_number: str, Access number of a specific report you want to retrieve data from.
+        :return: dataframe with company fillings.
+        """
+        assert _only_one_var(symbol, cik, access_number), "One of symbol, cik or access_number must be passed"
+        _endpoint = "/stock/filings"
+        params = None
+        if symbol is not None:
+            params = {'symbol': symbol}
+        if cik is not None:
+            params = {'cik': cik}
+        if access_number is not None:
+            params = {'accessNumber': access_number}
+        _json = self._request(
+            _endpoint,
+            params
+        )
+        _data = DataFrame(_json)
+        if access_number is not None:
+            _data = _data.T
+        return _data
+
     @_to_dataframe(_parse_dates=['date'],
                    _index=['date'])
     def calendar_ipo(self,
@@ -452,8 +518,8 @@ class Session:
             _endpoint,
             params
         )
-        _df = pd.DataFrame(_json)
-        _df['gradeTime'] = pd.to_datetime(_df['gradeTime'], unit='s', utc=True)
+        _df = DataFrame(_json)
+        _df['gradeTime'] = to_datetime(_df['gradeTime'], unit='s', utc=True)
         return _df
 
     # --------------------- Stock Price --------------------- #
@@ -542,7 +608,6 @@ class Session:
         _endpoint = "economic/code"
         return self._request(_endpoint)
 
-    @_to_dataframe(_parse_dates=['date'])
     def economic(
             self,
             economic_code,
@@ -674,9 +739,11 @@ class Session:
                 symbol,
                 resolution='D'):
         """
-        Run pattern recognition algorithm on symbols. Support double top/bottom, triple top/bottom, head and shoulders, triangle, wedge, channel, flag, and candlestick patterns.
+        Run pattern recognition algorithm on symbols. Support double top/bottom, triple top/bottom, head and shoulders,
+        triangle, wedge, channel, flag, and candlestick patterns.
         :param symbol: symbol or list of symbols
-        :param resolution: Supported resolution includes 1, 5, 15, 30, 60, D, W, M .Some timeframes might not be available depending on the exchange.
+        :param resolution: Supported resolution includes 1, 5, 15, 30, 60, D, W, M .Some timeframes might not be
+                            available depending on the exchange.
         :return: dataframe of patterns
         """
         if not _check_resolution(resolution):
@@ -697,7 +764,8 @@ class Session:
         """
         Get support and resistance levels for symbols.
         :param symbol: symbol or list of symbols
-        :param resolution: Supported resolution includes 1, 5, 15, 30, 60, D, W, M .Some timeframes might not be available depending on the exchange.
+        :param resolution: Supported resolution includes 1, 5, 15, 30, 60, D, W, M .Some timeframes might not be
+                            available depending on the exchange.
         :return: dataframe of support and resistance levels
         """
         if not _check_resolution(resolution):
@@ -716,7 +784,8 @@ class Session:
         """
         Get aggregate signal of multiple technical indicators such as MACD, RSI, Moving Average v.v.
         :param symbol: symbol or list of symbols
-        :param resolution: Supported resolution includes 1, 5, 15, 30, 60, D, W, M .Some timeframes might not be available depending on the exchange.
+        :param resolution: Supported resolution includes 1, 5, 15, 30, 60, D, W, M .Some timeframes might not be
+                            available depending on the exchange.
         :return: dataframe of signals
         """
         if not _check_resolution(resolution):

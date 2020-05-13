@@ -101,14 +101,21 @@ def _to_dataframe(_type='dataframe',
                 if _parse_dates is not None:
                     for _col in _parse_dates:
                         try:
-                            _df[_col] = to_datetime(_df[_col], unit='s')
+                            if _df[_col].dtype == int:
+                                _df[_col] = to_datetime(_df[_col], unit='s', utc=True)
+                            else:
+                                _df[_col] = to_datetime(_df[_col])
                         except :
                             print(f'Not possible parse dates of {_col}')
                             pass
                 if _index is not None:
                     _df = _df.set_index(_index)
             elif _type == 'serie':
-                _df = Series(func(clase, *args, **kwargs)).to_frame(args[0])
+                if len(args) > 0:
+                    _col_name = args[0]
+                else:
+                    _col_name = 'value'
+                _df = Series(func(clase, *args, **kwargs)).to_frame(_col_name)
             else:
                 _df = None
             return _df
@@ -176,3 +183,11 @@ def _to_time_cols(df):
     col_time = df.columns[df.columns.str.lower().str.contains('time')]
     df[col_time] = df[col_time].replace(0, NA).apply(lambda x: to_datetime(x, unit='s'))
     return df
+
+
+def _not_none_vars(*args):
+    return sum([bool(f) for f in args])
+
+
+def _only_one_var(*args):
+    return _not_none_vars(args) == 1
