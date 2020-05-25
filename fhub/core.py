@@ -380,7 +380,7 @@ class Session:
         if end is None:
             end = datetime.now().strftime("%Y-%m-%d")
         if start is None:
-            start = '1900-01-01'
+            start = '1970-01-03'
         params = {
             'from': _normalize_date(start),
             'to': _normalize_date(end)
