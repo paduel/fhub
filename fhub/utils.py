@@ -165,8 +165,15 @@ def _normalize_date(date):
 
 
 def _unixtime(date):
-    assert isinstance(date, str)
-    return int(datetime.strptime(_normalize_date(date), "%Y-%m-%d").timestamp())
+    if isinstance(date, str):
+        _date = int((datetime.strptime(_normalize_date(date), "%Y-%m-%d") - datetime(1970, 1, 1, 0, 0)).total_seconds())
+    elif isinstance(date, datetime):
+        _date = int((date - datetime(1970, 1, 1, 0, 0)).total_seconds())
+    elif isinstance(date, (int, float)):
+        _date = int(date)
+    else:
+        raise AttributeError("A date-like string, timestamp or datetime must be passed")
+    return _date
 
 
 def _normalize_indicator_schema(schema):

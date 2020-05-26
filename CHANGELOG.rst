@@ -1,6 +1,11 @@
 Change Log
 ===========
 
+0.0.13
+------
+- Fix timestamp bug at Windows (see https://github.com/paduel/fhub/issues/4)
+- Includes dividends (new Finnhub endpoint).
+
 0.0.12
 ------
 - Fix financials_as_reported frequency bug.
@@ -9,6 +14,6 @@ Change Log
 
 0.0.11
 ------
-- Include financials_as_reported and filings methods.
-- Include profile2 (thanks to @pesapower)
+- Includes financials_as_reported and filings methods.
+- Includes profile2 (thanks to @pesapower)
 - Fix several bugs about datetime.

@@ -76,8 +76,11 @@ class Session:
             params = {'token': self.key}
         else:
             params.update({'token': self.key})
+        _url = f"{self.BASE_URL}{endpoint}"
+        if self.verbose:
+            print(f'Calling url: {_url}')
         r = self.session.get(
-            f"{self.BASE_URL}{endpoint}",
+            _url,
             params=params
         )
         if self.verbose:
@@ -382,7 +385,7 @@ class Session:
         :return:
         """
         assert _only_one_var(symbol, cik, access_number), "One of symbol, cik or access_number must be passed"
-        _endpoint = "/stock/financials-reported"
+        _endpoint = "stock/financials-reported"
         assert (freq in ['annual', 'quarterly']), 'freq must be annual or quarterly'
         params = {'freq': freq}
         if symbol is not None:
@@ -414,7 +417,7 @@ class Session:
         :return: dataframe with company fillings.
         """
         assert _only_one_var(symbol, cik, access_number), "One of symbol, cik or access_number must be passed"
-        _endpoint = "/stock/filings"
+        _endpoint = "stock/filings"
         params = None
         if symbol is not None:
             params = {'symbol': symbol}
@@ -460,7 +463,23 @@ class Session:
     def ipos(self, *args, **kwargs):
         return self.calendar_ipo(*args, **kwargs)
 
-# --------------------- Stock Analysts --------------------- #
+    @_to_dataframe(_parse_dates=['date', 'payDate', 'recordDate', 'declarationDate'])
+    def dividends(self,
+                  symbol,
+                  start=None,
+                  end=None):
+        _endpoint = "stock/dividend"
+        params = {'symbol': symbol}
+        if start is not None:
+            params.update({'from': _normalize_date(start)})
+        else:
+            params.update({'from': "2019-01-01"})
+        if end is not None:
+            params.update({'to': _normalize_date(end)})
+
+        return self._request(_endpoint, params)
+
+    # --------------------- Stock Analysts --------------------- #
 
     @_recursive
     def recommendation(
@@ -555,7 +574,7 @@ class Session:
             return
         adjusted = 'true' if adjusted else 'false'
         if end is None:
-            end = datetime.now().strftime("%Y-%m-%d")
+            end = datetime.now()
         if start is None:
             start = '1900-01-01'
 
